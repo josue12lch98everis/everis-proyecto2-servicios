@@ -5,7 +5,6 @@ import java.util.Map;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,9 +27,6 @@ public class ClientController {
 	
 	@Autowired
 	private ClientService clientService;
-	
-	@Value("${configuracion.autor.email}")
-	private String email;
 	
 	@PostMapping("/saveClient")
 	public Mono<ResponseEntity<?>> saveClient(@Valid @RequestBody ClientDocument client){
@@ -59,10 +55,4 @@ public class ClientController {
 		return clientService.deleteClient(id);
 	}
 	
-	@GetMapping("/getTextoActuator")
-	public String getTexto() {
-		return email;
-	}
-
-
 }
