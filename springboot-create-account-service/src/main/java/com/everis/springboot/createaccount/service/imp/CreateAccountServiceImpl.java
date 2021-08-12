@@ -17,13 +17,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.everis.springboot.createaccount.dao.CreateAccountDao;
 import com.everis.springboot.createaccount.document.ClientDocument;
 import com.everis.springboot.createaccount.document.CreateAccountDocument;
-<<<<<<< HEAD
 import com.everis.springboot.createaccount.document.CurrentAccount;
 import com.everis.springboot.createaccount.document.FixedTermDocument;
 import com.everis.springboot.createaccount.document.SavingAccount;
-=======
-import com.everis.springboot.createaccount.document.FixedTermDocument;
->>>>>>> 55b7438fe27720a8a9e69a632a16f77d2557480c
 import com.everis.springboot.createaccount.service.CreateAccountService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -40,13 +36,11 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 	@Autowired
 	private CreateAccountDao createAccountDao;
 	
-
 	@Value("${everis.precio.mantenimiento}")
 	private double costOfMaintenment;
 	
 	@Value("${everis.cantidad.movimientos}")
 	private int movementsPerMonth;
-
 	@Value("${everis.dia-retiro.plazo-fijo}")
 	private Integer diaRetiro;
 
@@ -119,11 +113,7 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 				account.setClient(id);
 				
 				if(account.getAccount_type().equals("Cuenta Plazo Fijo")) {
-<<<<<<< HEAD
 					 
-=======
-					
->>>>>>> 55b7438fe27720a8a9e69a632a16f77d2557480c
 					
 					Date date = Calendar.getInstance().getTime();
 					FixedTermDocument fixedTerm = FixedTermDocument.builder()
@@ -139,7 +129,6 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 					.body(Mono.just(fixedTerm), FixedTermDocument.class)
 					.retrieve().bodyToMono(FixedTermDocument.class).subscribe();
 				}
-<<<<<<< HEAD
 	if(account.getAccount_type().equals("Cuenta corriente")) {
 					
 					
@@ -170,13 +159,11 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 		
 		
 		webClientBuilder.build().post()
-		.uri("http://localhost:8090/api/fixed-term/saveAccount")
-		.body(Mono.just(savingAccount), FixedTermDocument.class)
-		.retrieve().bodyToMono(FixedTermDocument.class).subscribe();
+		.uri("http://localhost:8090/api/accountSavings")
+		.body(Mono.just(savingAccount), SavingAccount.class)
+		.retrieve().bodyToMono(SavingAccount.class).subscribe();
 	}
-	
-=======
->>>>>>> 55b7438fe27720a8a9e69a632a16f77d2557480c
+
 				
 				return createAccountDao.save(account).flatMap( p -> {
 					response.put("productSaved", p);
