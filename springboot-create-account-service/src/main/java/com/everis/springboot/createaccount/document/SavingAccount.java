@@ -2,6 +2,7 @@ package com.everis.springboot.createaccount.document;
 
 
 
+import java.io.Serializable;
 import java.util.Date;
 
 import org.springframework.data.annotation.Id;
@@ -17,7 +18,7 @@ import lombok.Builder;
 @Setter
 @AllArgsConstructor
 @Builder
-public class SavingAccount {
+public class SavingAccount implements Serializable {
 	
 	@Id
 	private String id;

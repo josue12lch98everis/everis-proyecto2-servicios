@@ -2,6 +2,7 @@ package com.everis.banca.app.savingAccount.models.documents;
 
 
 
+import java.io.Serializable;
 import java.util.Date;
 
 import org.springframework.data.annotation.Id;
@@ -15,12 +16,12 @@ import lombok.AllArgsConstructor;
 @Getter
 @Setter
 @AllArgsConstructor
-public class SavingAccount {
+public class SavingAccount implements Serializable{
 	
 	@Id
 	private String id;
 	private double amountInAccount;
-	private int clientId;
+	private String clientId;
 	private int  movementsPerMonth;
 	private String type;
 	private Date modifiedAt ;
