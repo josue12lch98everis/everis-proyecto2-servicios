@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,9 @@ public class CreditServiceImpl implements CreditService {
 	
 	@Autowired
 	private CreditDao creditDao;
+	
+	@Value("${everis.url.gateway}")
+	private String urlGateway;
 
 	@Override
 	public Mono<ResponseEntity<Map<String, Object>>> saveCredit(String id, CreditDocument credit) {
@@ -37,7 +41,7 @@ public class CreditServiceImpl implements CreditService {
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
 		
 		Mono<ClientDocument> client = webClientBuilder.build().get()
-				.uri("http://localhost:8090/api/client/client/"+id)
+				.uri(urlGateway+"/api/client/client/"+id)
 				.retrieve()
 				.bodyToMono(ClientDocument.class);
 		
@@ -134,7 +138,7 @@ public class CreditServiceImpl implements CreditService {
 							.build();
 					
 					webClientBuilder.build().post()
-					.uri("http://localhost:8090/api/movement/saveMovement")
+					.uri(urlGateway+"/api/movement/saveMovement")
 					.body(Mono.just(movement), MovementDocument.class)
 					.retrieve().bodyToMono(MovementDocument.class).subscribe();
 					
@@ -174,7 +178,7 @@ public class CreditServiceImpl implements CreditService {
 							.build();
 					
 					webClientBuilder.build().post()
-					.uri("http://localhost:8090/api/movement/saveMovement")
+					.uri(urlGateway+"/api/movement/saveMovement")
 					.body(Mono.just(movement), MovementDocument.class)
 					.retrieve().bodyToMono(MovementDocument.class).subscribe();
 					

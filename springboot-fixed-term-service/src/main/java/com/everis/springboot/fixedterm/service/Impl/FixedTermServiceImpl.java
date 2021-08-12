@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,9 @@ public class FixedTermServiceImpl implements FixedTermService {
 	
 	@Autowired
 	private WebClient.Builder webClientBuilder;
+	
+	@Value("${everis.url.gateway}")
+	private String urlGateway;
 
 	@Override
 	public Mono<FixedTermDocument> createAccount(FixedTermDocument document) {
@@ -57,7 +61,7 @@ public class FixedTermServiceImpl implements FixedTermService {
 							.build();
 					
 					webClientBuilder.build().post()
-					.uri("http://localhost:8090/api/movement/saveMovement")
+					.uri(urlGateway+"/api/movement/saveMovement")
 					.body(Mono.just(movement), MovementDocument.class)
 					.retrieve().bodyToMono(MovementDocument.class).subscribe();
 					
@@ -102,7 +106,7 @@ public class FixedTermServiceImpl implements FixedTermService {
 								.build();
 						
 						webClientBuilder.build().post()
-						.uri("http://localhost:8090/api/movement/saveMovement")
+						.uri(urlGateway+"/api/movement/saveMovement")
 						.body(Mono.just(movement), MovementDocument.class)
 						.retrieve().bodyToMono(MovementDocument.class).subscribe();
 						
