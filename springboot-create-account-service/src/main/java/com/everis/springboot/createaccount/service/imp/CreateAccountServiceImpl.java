@@ -36,6 +36,9 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 	
 	@Value("${everis.dia-retiro.plazo-fijo}")
 	private Integer diaRetiro;
+	
+	@Value("${everis.url.gateway}")
+	private String urlGateway;
 
 	@Override
 	public Mono<CreateAccountDocument> findAccountsById(String id) {
@@ -49,8 +52,7 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
 		
 		Mono<ClientDocument> client = webClientBuilder.build().get()
-				.uri("http://localhost:8090/api/client/client/"+id)
-//				.uri("http://localhost:55457/client/"+id)
+				.uri(urlGateway+"/api/client/client/"+id)
 				.retrieve()
 				.bodyToMono(ClientDocument.class);
 		
@@ -118,7 +120,7 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 					
 					
 					webClientBuilder.build().post()
-					.uri("http://localhost:8090/api/fixed-term/saveAccount")
+					.uri(urlGateway+"/api/fixed-term/saveAccount")
 					.body(Mono.just(fixedTerm), FixedTermDocument.class)
 					.retrieve().bodyToMono(FixedTermDocument.class).subscribe();
 				}
