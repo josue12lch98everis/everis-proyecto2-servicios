@@ -42,5 +42,15 @@ public class CreditController {
 	public Mono<ResponseEntity<Map<String,Object>>> getBalance(@PathVariable("idCredit") String idCredit) {
 		return creditService.consultCredit(idCredit);
 	}
+	
+	@GetMapping("/getOnlyCredits/{idClient}")
+	public Mono<ResponseEntity<Map<String,Object>>> getOnlyCredits(@PathVariable("idClient") String idClient) {
+		return creditService.getOnlyCredits(idClient);
+	}
+	
+	@GetMapping("/getCreditCards/{idClient}")
+	public Mono<ResponseEntity<Map<String,Object>>> getCreditCards(@PathVariable("idClient") String idClient) {
+		return creditService.getCreditCards(idClient);
+	}
 
 }

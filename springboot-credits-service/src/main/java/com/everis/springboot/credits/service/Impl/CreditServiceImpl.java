@@ -128,10 +128,7 @@ public class CreditServiceImpl implements CreditService {
 					Date date = Calendar.getInstance().getTime();
 					MovementDocument movement = MovementDocument.builder()
 							.tipoMovimiento("Pago Credito")
-							.tipoProducto(
-									cre.getCreditType().equals("Credito Personal") ? "Credito Personal" : 
-									cre.getCreditType().equals("Credito Empresarial") ? "Credito Empresarial" :
-									"Tarjeta de Credito")
+							.tipoProducto(cre.getCreditType())
 							.fechaMovimiento(dateFormat.format(date))
 							.idCuenta(idCredit)
 							.idCliente(cre.getIdClient())
@@ -168,10 +165,7 @@ public class CreditServiceImpl implements CreditService {
 					Date date = Calendar.getInstance().getTime();
 					MovementDocument movement = MovementDocument.builder()
 							.tipoMovimiento("Consumo Credito")
-							.tipoProducto(
-									cre.getCreditType().equals("Credito Personal") ? "Credito Personal" : 
-									cre.getCreditType().equals("Credito Empresarial") ? "Credito Empresarial" :
-									"Tarjeta de Credito")
+							.tipoProducto(cre.getCreditType())
 							.fechaMovimiento(dateFormat.format(date))
 							.idCuenta(idCredit)
 							.idCliente(cre.getIdClient())
@@ -202,6 +196,25 @@ public class CreditServiceImpl implements CreditService {
 			return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
 			
 		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+	}
+
+	@Override
+	public Mono<ResponseEntity<Map<String, Object>>> getOnlyCredits(String idClient) {
+		Map<String, Object> response = new HashMap<>();
+		
+		return creditDao.findByIdClientAndCreditType(idClient, "Credito Personal").flatMap( c -> {
+			response.put("credito", c);
+			return Mono.just(new ResponseEntity<>(response, HttpStatus.OK));
+		});
+	}
+
+	@Override
+	public Mono<ResponseEntity<Map<String, Object>>> getCreditCards(String idClient) {
+		Map<String, Object> response = new HashMap<>();
+		return creditDao.findByIdClientAndCreditType(idClient, "Tarjeta de Credito").flatMap( c -> {
+			response.put("credito", c);
+			return Mono.just(new ResponseEntity<>(response, HttpStatus.OK));
+		});
 	}
 
 }

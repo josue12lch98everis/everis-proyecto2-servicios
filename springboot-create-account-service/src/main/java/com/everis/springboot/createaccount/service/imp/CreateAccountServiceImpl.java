@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.everis.springboot.createaccount.dao.CreateAccountDao;
 import com.everis.springboot.createaccount.document.ClientDocument;
 import com.everis.springboot.createaccount.document.CreateAccountDocument;
+import com.everis.springboot.createaccount.document.CreditDocument;
 import com.everis.springboot.createaccount.document.CurrentAccount;
 import com.everis.springboot.createaccount.document.FixedTermDocument;
 import com.everis.springboot.createaccount.document.SavingAccount;
@@ -73,7 +74,12 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 				
 				System.out.println(c.toString());
 				
-				if(c.getClient_type().getDescription().equals("Personal") ) {
+				if(!account.getAccount_type().equals("Cuenta de Ahorro")  && !account.getAccount_type().equals("Cuenta Corriente") && !account.getAccount_type().equals("Cuenta Plazo Fijo")) {
+					response.put("mensaje", "No se puede crear el tipo de cuenta, los tipos de cuentas solo pueden ser: Cuenta de Ahorro, Cuenta Corriente y Cuenta Plazo Fijo");
+					return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
+				}
+				
+				if(c.getClient_type().getDescription().equals("Personal") || c.getClient_type().getDescription().equals("VIP")) {
 					for (CreateAccountDocument acc : accounts) {
 						if(acc.getAccount_type().equals("Cuenta de Ahorro")) {
 							cAhorro++;
@@ -98,7 +104,7 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 						}
 					}
 					
-				}else if(c.getClient_type().getDescription().equals("Empresarial")) {
+				}else if(c.getClient_type().getDescription().equals("Empresarial") || c.getClient_type().getDescription().equals("PYME")) {
 					if(account.getAccount_type().equals("Cuenta de Ahorro")) {
 						response.put("mensaje", "Un usuario empresarial no puede tener cuenta de ahorro");
 						return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
@@ -107,7 +113,8 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 						response.put("mensaje", "Un usuario empresarial no puede tener cuenta a plazo fijo");
 						return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
 					}
-				}else if(!c.getClient_type().getDescription().equals("Empresarial") && !c.getClient_type().getDescription().equals("Personal")) {
+				}else if(!c.getClient_type().getDescription().equals("Empresarial") && !c.getClient_type().getDescription().equals("Personal") &&
+						!c.getClient_type().getDescription().equals("VIP") && !c.getClient_type().getDescription().equals("PYME")) {
 					response.put("mensaje", "Ingreso un tipo de cliente incorrecto");
 					return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
 				}
@@ -115,8 +122,6 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 				account.setClient(id);
 				
 				if(account.getAccount_type().equals("Cuenta Plazo Fijo")) {
-					 
-					
 					Date date = Calendar.getInstance().getTime();
 					FixedTermDocument fixedTerm = FixedTermDocument.builder()
 							.saldo(account.getMount())
@@ -131,9 +136,8 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 					.body(Mono.just(fixedTerm), FixedTermDocument.class)
 					.retrieve().bodyToMono(FixedTermDocument.class).subscribe();
 				}
-	if(account.getAccount_type().equals("Cuenta corriente")) {
-					
-					
+				
+				if(account.getAccount_type().equals("Cuenta Corriente")) {
 					Date date = Calendar.getInstance().getTime();
 					CurrentAccount currentAccount = CurrentAccount.builder()
 							.amountInAccount(account.getMount())
@@ -142,29 +146,58 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 							.clientId(id)
 							.build();
 					
-					
+				
 					webClientBuilder.build().post()
-					.uri("http://localhost:8090/api/currentAccount")
+					.uri(urlGateway+"/api/currentAccount")
 					.body(Mono.just(currentAccount), CurrentAccount.class)
 					.retrieve().bodyToMono(CurrentAccount.class).subscribe();
 				}
-	if(account.getAccount_type().equals("Cuenta de ahorro")) {
+				
+				if(account.getAccount_type().equals("Cuenta de Ahorro")) {
+					
+					Date date = Calendar.getInstance().getTime();
+					
+					if(c.getClient_type().getDescription().equals("VIP")) {
+						webClientBuilder.build().get()
+								.uri(urlGateway+"/api/credit/getCreditCards/"+id)
+								.retrieve()
+								.bodyToMono(CreditDocument.class).flatMap( credit -> {
+									if(credit != null) {
+										response.put("mensaje", "No puede crear una cuenta ahorro para un cliente vip sin una tarjeta de crédito del cliente");
+										return Mono.just(new ResponseEntity<>(response,HttpStatus.BAD_GATEWAY));
+									}else {
+										SavingAccount savingAccount = SavingAccount.builder()
+												.amountInAccount(account.getMount())
+												.createAt(date)
+												.clientId(id)
+												.movementsPerMonth(movementsPerMonth)
+												.build();
+										
+										
+										webClientBuilder.build().post()
+										.uri(urlGateway+"/api/accountSavings")
+										.body(Mono.just(savingAccount), SavingAccount.class)
+										.retrieve().bodyToMono(SavingAccount.class).subscribe();
+										
+										return Mono.just(credit);
+									}
+								});
+					}else {
+						SavingAccount savingAccount = SavingAccount.builder()
+								.amountInAccount(account.getMount())
+								.createAt(date)
+								.clientId(id)
+								.movementsPerMonth(movementsPerMonth)
+								.build();
+						
+						
+						webClientBuilder.build().post()
+						.uri(urlGateway+"/api/accountSavings")
+						.body(Mono.just(savingAccount), SavingAccount.class)
+						.retrieve().bodyToMono(SavingAccount.class).subscribe();
+					}
 		
-		
-		Date date = Calendar.getInstance().getTime();
-		SavingAccount savingAccount = SavingAccount.builder()
-				.amountInAccount(account.getMount())
-				.createAt(date)
-				.clientId(id)
-				.movementsPerMonth(movementsPerMonth)
-				.build();
-		
-		
-		webClientBuilder.build().post()
-		.uri("http://localhost:8090/api/accountSavings")
-		.body(Mono.just(savingAccount), SavingAccount.class)
-		.retrieve().bodyToMono(SavingAccount.class).subscribe();
-	}
+				}
 
 				
 				return createAccountDao.save(account).flatMap( p -> {
