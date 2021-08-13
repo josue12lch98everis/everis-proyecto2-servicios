@@ -158,28 +158,14 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 					Date date = Calendar.getInstance().getTime();
 					
 					if(c.getClient_type().getDescription().equals("VIP")) {
-						webClientBuilder.build().get()
+						Mono<Boolean> hasCreditCard =webClientBuilder.build().get()
 								.uri(urlGateway+"/api/credit/getCreditCards/"+id)
 								.retrieve()
-								.bodyToMono(CreditDocument.class).flatMap( credit -> {
-									if(credit != null) {
-										response.put("mensaje", "No puede crear una cuenta ahorro para un cliente vip sin una tarjeta de crédito del cliente");
-										return Mono.just(new ResponseEntity<>(response,HttpStatus.BAD_GATEWAY));
+								.bodyToMono(CreditDocument.class).map( credit -> {
+									if(credit == null) {
+										return false;
 									}else {
-										SavingAccount savingAccount = SavingAccount.builder()
-												.amountInAccount(account.getMount())
-												.createAt(date)
-												.clientId(id)
-												.movementsPerMonth(movementsPerMonth)
-												.build();
-										
-										
-										webClientBuilder.build().post()
-										.uri(urlGateway+"/api/accountSavings")
-										.body(Mono.just(savingAccount), SavingAccount.class)
-										.retrieve().bodyToMono(SavingAccount.class).subscribe();
-										
-										return Mono.just(credit);
+										return true;
 									}
 								});
 					}else {
