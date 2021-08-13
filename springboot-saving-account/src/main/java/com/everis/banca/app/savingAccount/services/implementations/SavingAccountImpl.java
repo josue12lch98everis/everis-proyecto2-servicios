@@ -1,11 +1,23 @@
 package com.everis.banca.app.savingAccount.services.implementations;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 
 import com.everis.banca.app.savingAccount.dao.SavingAccountDao;
+import com.everis.banca.app.savingAccount.models.documents.MovementDocument;
 import com.everis.banca.app.savingAccount.models.documents.SavingAccount;
 import com.everis.banca.app.savingAccount.services.interfaces.SavingAccountService;
 
@@ -17,6 +29,13 @@ public class SavingAccountImpl implements SavingAccountService {
 
 	@Autowired
 	private SavingAccountDao savingAccountDao;
+	
+	@Autowired
+	private WebClient.Builder webClientBuilder;
+	
+	@Value("${everis.cantidad.movimientos}")
+	private Integer amountOfMovements;
+
 	
 	@Override
 	public Flux<SavingAccount> getAllSavingAccount() {
@@ -44,5 +63,116 @@ public class SavingAccountImpl implements SavingAccountService {
 		// TODO Auto-generated method stub
 		return savingAccountDao.deleteById(idSavingAccount);
 	}
+	@Override
+	public Mono<ResponseEntity<Map<String,Object>>> depositar(String idCuenta,Double cantidad) {
+		Map<String, Object> response = new HashMap<>();
+		Calendar calendar = Calendar.getInstance();
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		//TODO: Change this to make general "localhost"
+		return webClientBuilder.build().get()
+			    .uri(builder -> builder.scheme("http")
+	                    .host("localhost").port(8090).path("api/movement/numberOfMovements")
+	                    .queryParam("idCuenta", idCuenta)
+	                    .build())
+		.retrieve().bodyToMono(Long.class).flatMap(number->{
+		//TODO: put movements per month static
+			if (number<=amountOfMovements) {
+				return savingAccountDao.findById(idCuenta).flatMap( c -> {
+					c.setAmountInAccount(c.getAmountInAccount() + cantidad);
+					return savingAccountDao.save(c).flatMap(acc -> {
+							
+							Date date = Calendar.getInstance().getTime();
+							MovementDocument movement = MovementDocument.builder()
+									.tipoMovimiento("Deposito")
+									.tipoProducto("Cuenta Ahorros")
+									.fechaMovimiento(dateFormat.format(date))
+									.idCuenta(idCuenta)
+									.idCliente(acc.getClientId())
+									.build();
+							
+							webClientBuilder.build().post()
+							.uri("http://localhost:8090/api/movement/saveMovement")
+							.body(Mono.just(movement), MovementDocument.class)
+							.retrieve().bodyToMono(MovementDocument.class).subscribe();
+						
+							
+							response.put("mensaje", "Se hizo el deposito exitosamente");
+							response.put("cuenta", acc);
+							return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+						});
+					
+				}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+			}
+			else {
+				response.put("mensaje", "Supero la cantidad de movimientos mensuales");
+				
+				return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+
+			}
+		});
+		
+		
+	
+	}
+
+
+	
+	@Override
+	public Mono<ResponseEntity<Map<String, Object>>> retirar(String idCuenta, Double cantidad) {
+		Map<String, Object> response = new HashMap<>();
+		Calendar calendar = Calendar.getInstance();
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		
+		return savingAccountDao.findById(idCuenta).flatMap( c -> {
+			
+			
+				if(c.getAmountInAccount() - cantidad < 0) {
+					response.put("mensaje", "No puede realizar este retiro ya que no cuenta con el saldo suficiente");
+					return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+				}else {
+					
+					
+					
+					c.setAmountInAccount(c.getAmountInAccount() - cantidad);
+					return savingAccountDao.save(c).flatMap(acc -> {
+						
+						Date date = Calendar.getInstance().getTime();
+						MovementDocument movement = MovementDocument.builder()
+								.tipoMovimiento("Retiro")
+								.tipoProducto("Cuenta Corriente")
+								.fechaMovimiento(dateFormat.format(date))
+								.idCuenta(idCuenta)
+								.idCliente(acc.getClientId())
+								.build();
+						
+						webClientBuilder.build().post()
+						.uri("http://localhost:8090/api/movement/saveMovement")
+						.body(Mono.just(movement), MovementDocument.class)
+						.retrieve().bodyToMono(MovementDocument.class).subscribe();
+						
+						response.put("mensaje", "Se hizo el retiro exitosamente");
+						response.put("cuenta", acc);
+						return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+					});
+				}
+		
+		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+	}
+
+	
+
+	@Override
+	public Mono<ResponseEntity<Map<String, Object>>> consultarSaldo(String idAccount) {
+		Map<String, Object> response = new HashMap<>();
+		
+		return savingAccountDao.findById(idAccount).flatMap( c -> {
+			
+			
+			response.put("mensaje", "El saldo de la cuenta es: S/."+c.getAmountInAccount());
+			return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+			
+		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+	}
+	
 
 }

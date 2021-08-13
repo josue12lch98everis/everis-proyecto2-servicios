@@ -10,13 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.everis.banca.app.cuentacorriente.dao.CurrentAccountDao;
 import com.everis.banca.app.cuentacorriente.models.documents.CurrentAccount;
@@ -106,6 +100,24 @@ public class CurrentAccountController {
 					return currentAccountService.deleteById(idCurrentAccount).then(Mono.just(new ResponseEntity<Void>(HttpStatus.NO_CONTENT))) ;	
 				}).defaultIfEmpty(new ResponseEntity<Void>(HttpStatus.NOT_FOUND));
 			}
+			
+			@PostMapping("/deposit/{id}/{amount}")
+			public Mono<ResponseEntity<Map<String,Object>>> deposit(@PathVariable String id, @PathVariable Double amount){
+				System.out.println("Entro al metodo guardar cuenta");
+				return currentAccountService.depositar(id, amount);
+			}
+			
+			@PostMapping("/retirement/{id}/{amount}")
+			public Mono<ResponseEntity<Map<String,Object>>> retirement(@PathVariable String id, @PathVariable Double amount){
+				System.out.println("Entro al metodo guardar cuenta");
+				return currentAccountService.retirar(id, amount);
+			}
+			
+			@GetMapping("/getBalance/{id}")
+			public Mono<ResponseEntity<Map<String,Object>>> getBalance(@PathVariable("id") String id) {
+				return currentAccountService.consultarSaldo(id);
+			}
+
 			
 		}
 	
