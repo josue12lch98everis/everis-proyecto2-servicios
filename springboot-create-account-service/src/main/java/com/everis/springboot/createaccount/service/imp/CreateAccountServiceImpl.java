@@ -57,7 +57,7 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 	public Mono<ResponseEntity<Map<String, Object>>> saveAccount(String id, CreateAccountDocument account) {
 		Map<String, Object> response = new HashMap<>();
 		
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 		
 		Mono<ClientDocument> client = webClientBuilder.build().get()
 				.uri(urlGateway+"/api/client/client/"+id)
@@ -138,19 +138,51 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 				}
 				
 				if(account.getAccount_type().equals("Cuenta Corriente")) {
-					Date date = Calendar.getInstance().getTime();
-					CurrentAccount currentAccount = CurrentAccount.builder()
-							.amountInAccount(account.getMount())
-							.costOfMaintenance(costOfMaintenment)
-							.createAt(date)
-							.clientId(id)
-							.build();
 					
-				
-					webClientBuilder.build().post()
-					.uri(urlGateway+"/api/currentAccount")
-					.body(Mono.just(currentAccount), CurrentAccount.class)
-					.retrieve().bodyToMono(CurrentAccount.class).subscribe();
+					Date date = Calendar.getInstance().getTime();
+					
+					if(c.getClient_type().getDescription().equals("PYME")) {
+						System.out.println("El cliente PYME quiere abrir una cuenta corriente");
+						Map<String, Object> responseEmpty = new HashMap<>();
+						responseEmpty.put("mensaje", "No existen tarjetas de credito para este usuario");
+						return webClientBuilder.build().get()
+								.uri(urlGateway+"/api/credit/getCreditCards/"+id)
+								.retrieve().bodyToMono(CreditDocument.class).flatMap( cre ->{
+										CurrentAccount currentAccount = CurrentAccount.builder()
+												.amountInAccount(account.getMount())
+												.costOfMaintenance(costOfMaintenment)
+												.createAt(date)
+												.clientId(id)
+												.build();
+										
+									
+										webClientBuilder.build().post()
+										.uri(urlGateway+"/api/currentAccount")
+										.body(Mono.just(currentAccount), CurrentAccount.class)
+										.retrieve().bodyToMono(CurrentAccount.class).subscribe();
+										
+										return createAccountDao.save(account).flatMap( p -> {
+											response.put("productSaved", p);
+											response.put("mensaje", "Cuenta registrada con exito");
+											return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.OK)); 
+										});
+									
+								}).defaultIfEmpty(new ResponseEntity<>(responseEmpty, HttpStatus.BAD_GATEWAY));
+					}else {
+						CurrentAccount currentAccount = CurrentAccount.builder()
+								.amountInAccount(account.getMount())
+								.costOfMaintenance(costOfMaintenment)
+								.createAt(date)
+								.clientId(id)
+								.build();
+						
+					
+						webClientBuilder.build().post()
+						.uri(urlGateway+"/api/currentAccount")
+						.body(Mono.just(currentAccount), CurrentAccount.class)
+						.retrieve().bodyToMono(CurrentAccount.class).subscribe();
+					}
+					
 				}
 				
 				if(account.getAccount_type().equals("Cuenta de Ahorro")) {
@@ -158,16 +190,31 @@ public class CreateAccountServiceImpl implements CreateAccountService {
 					Date date = Calendar.getInstance().getTime();
 					
 					if(c.getClient_type().getDescription().equals("VIP")) {
-						Mono<Boolean> hasCreditCard =webClientBuilder.build().get()
+						System.out.println("El cliente vip quiere abrir una cuenta de ahorro");
+						Map<String, Object> responseEmpty = new HashMap<>();
+						responseEmpty.put("mensaje", "No existen tarjetas de credito para este usuario");
+						return webClientBuilder.build().get()
 								.uri(urlGateway+"/api/credit/getCreditCards/"+id)
-								.retrieve()
-								.bodyToMono(CreditDocument.class).map( credit -> {
-									if(credit == null) {
-										return false;
-									}else {
-										return true;
-									}
-								});
+								.retrieve().bodyToMono(CreditDocument.class).flatMap( cre ->{
+										SavingAccount savingAccount = SavingAccount.builder()
+												.amountInAccount(account.getMount())
+												.createAt(date)
+												.clientId(id)
+												.movementsPerMonth(movementsPerMonth)
+												.build();
+										
+										webClientBuilder.build().post()
+										.uri(urlGateway+"/api/accountSavings")
+										.body(Mono.just(savingAccount), SavingAccount.class)
+										.retrieve().bodyToMono(SavingAccount.class).subscribe();
+										
+										return createAccountDao.save(account).flatMap( p -> {
+											response.put("productSaved", p);
+											response.put("mensaje", "Cuenta registrada con exito");
+											return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.OK)); 
+										});
+									
+								}).defaultIfEmpty(new ResponseEntity<>(responseEmpty, HttpStatus.BAD_GATEWAY));
 					}else {
 						SavingAccount savingAccount = SavingAccount.builder()
 								.amountInAccount(account.getMount())

@@ -42,7 +42,7 @@ public class FixedTermServiceImpl implements FixedTermService {
 	public Mono<ResponseEntity<Map<String,Object>>> depositar(String idCuenta,Double cantidad) {
 		Map<String, Object> response = new HashMap<>();
 		Calendar calendar = Calendar.getInstance();
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	
 		
 		return fixedTermDao.findById(idCuenta).flatMap( c -> {
@@ -81,7 +81,7 @@ public class FixedTermServiceImpl implements FixedTermService {
 	public Mono<ResponseEntity<Map<String,Object>>> retirar(String idCuenta,Double cantidad) {
 		Map<String, Object> response = new HashMap<>();
 		Calendar calendar = Calendar.getInstance();
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 		
 		return fixedTermDao.findById(idCuenta).flatMap( c -> {
 			

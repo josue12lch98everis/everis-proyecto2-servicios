@@ -38,7 +38,7 @@ public class CreditServiceImpl implements CreditService {
 	public Mono<ResponseEntity<Map<String, Object>>> saveCredit(String id, CreditDocument credit) {
 		Map<String, Object> response = new HashMap<>();
 		
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 		
 		Mono<ClientDocument> client = webClientBuilder.build().get()
 				.uri(urlGateway+"/api/client/client/"+id)
@@ -51,10 +51,17 @@ public class CreditServiceImpl implements CreditService {
 			Mono<ResponseEntity<Map<String,Object>>> res = client.flatMap(c -> {
 				Integer creditAccount = 0;
 				Integer creditCard = 0;
+				String tipoCliente = "";
 				
 				System.out.println(c.toString());
+				System.out.println(credits.toString());
 				
-				if(c.getClient_type().getDescription().equals("Personal") ) {
+				if(!credit.getCreditType().equals("Credito")  && !credit.getCreditType().equals("Tarjeta de Credito")) {
+					response.put("mensaje", "No se puede crear el tipo de credito, los tipos de creditos solo pueden ser: Credito y Tarjeta de Credito");
+					return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
+				}
+				
+				if(c.getClient_type().getDescription().equals("Personal") || c.getClient_type().getDescription().equals("VIP")) {
 					for (CreditDocument cre : credits) {
 						if(cre.getCreditType().equals("Credito Personal")) {
 							creditAccount++;
@@ -63,7 +70,7 @@ public class CreditServiceImpl implements CreditService {
 							creditCard++;
 						}
 	
-						if(credit.getCreditType().equals("Credito Personal") && creditAccount>0) {
+						if(credit.getCreditType().equals("Credito") && creditAccount>0) {
 							response.put("mensaje", "No puede crear el credito, un cliente personal no puede tener más de un credito");
 							return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
 						}
@@ -73,7 +80,7 @@ public class CreditServiceImpl implements CreditService {
 						}
 					}
 					
-				}else if(c.getClient_type().getDescription().equals("Empresarial")) {
+				}else if(c.getClient_type().getDescription().equals("Empresarial") || c.getClient_type().getDescription().equals("PYME")) {
 					for (CreditDocument cre : credits) {
 						if(cre.getCreditType().equals("Tarjeta de Credito")) {
 							creditCard++;
@@ -83,15 +90,27 @@ public class CreditServiceImpl implements CreditService {
 							return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
 						}
 					}
-				}else if(!c.getClient_type().getDescription().equals("Empresarial") && !c.getClient_type().getDescription().equals("Personal")) {
-					response.put("mensaje", "El tipo de cliente incorrecto");
+				}else if(!c.getClient_type().getDescription().equals("Empresarial") && !c.getClient_type().getDescription().equals("Personal") &&
+						!c.getClient_type().getDescription().equals("VIP") && !c.getClient_type().getDescription().equals("PYME")) {
+					response.put("mensaje", "El tipo de cliente es incorrecto");
 					return Mono.just(new ResponseEntity<Map<String,Object>>(response,HttpStatus.BAD_REQUEST));
 				}
+				
+				if((c.getClient_type().getDescription().equals("Personal") || c.getClient_type().getDescription().equals("VIP")) && credit.getCreditType().equals("Credito")) {
+					tipoCliente = "Credito Personal";
+				}else if ((c.getClient_type().getDescription().equals("Empresarial") || c.getClient_type().getDescription().equals("PYME")) && credit.getCreditType().equals("Credito")) {
+					tipoCliente = "Credito Empresarial";
+				}else {
+					tipoCliente = credit.getCreditType();
+				}
+				
 				Date date = Calendar.getInstance().getTime();
 				credit.setIdClient(id);
 				credit.setCreationDate(dateFormat.format(date));
 				credit.setCreditLimit(credit.getBalance());
 				credit.setCreditPaid(0.0);
+				
+				credit.setCreditType(tipoCliente);
 				
 				return creditDao.save(credit).flatMap( cre -> {
 					response.put("creditSaved", cre);
@@ -109,7 +128,7 @@ public class CreditServiceImpl implements CreditService {
 	@Override
 	public Mono<ResponseEntity<Map<String, Object>>> payCredit(String idCredit, Double cantidad) {
 		Map<String, Object> response = new HashMap<>();
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	
 		
 		return creditDao.findById(idCredit).flatMap( c -> {
@@ -151,7 +170,7 @@ public class CreditServiceImpl implements CreditService {
 	@Override
 	public Mono<ResponseEntity<Map<String, Object>>> spendCredit(String idCredit, Double cantidad) {
 		Map<String, Object> response = new HashMap<>();
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 	
 		
 		return creditDao.findById(idCredit).flatMap( c -> {
