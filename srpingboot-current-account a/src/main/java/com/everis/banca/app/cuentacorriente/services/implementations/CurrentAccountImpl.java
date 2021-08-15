@@ -30,6 +30,12 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 	private CurrentAccountDao  currentAccountDao;
 	@Autowired
 	private WebClient.Builder webClientBuilder;
+	@Value("${everis.cantidad.movimientos}")
+	private Integer amountOfMovements;
+	@Value("${everis.comision.movimientos}")
+	private Integer comissionPerMovement;
+	@Value("${everis.url.gateway}")
+	private String urlGateway;
 	
 
 	@Override
@@ -77,24 +83,25 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 		Calendar calendar = Calendar.getInstance();
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
 	
-		
+		return webClientBuilder.build().get()
+			    .uri(urlGateway+"/api/movement/numberOfMovements?idCuenta="+idCuenta)
+		.retrieve().bodyToMono(Long.class).flatMap(number->{
+		//TODO: put movements per month static
+			if (number<=amountOfMovements) {
 		return currentAccountDao.findById(idCuenta).flatMap( c -> {
 			c.setAmountInAccount(c.getAmountInAccount() + cantidad);
-			
-			
-				
 				return currentAccountDao.save(c).flatMap(acc -> {
 					Date date = Calendar.getInstance().getTime();
 					MovementDocument movement = MovementDocument.builder()
 							.tipoMovimiento("Deposito")
-							.tipoProducto("Cuenta Plazo Fijo")
+							.tipoProducto("Cuenta Corriente")
 							.fechaMovimiento(dateFormat.format(date))
 							.idCuenta(idCuenta)
 							.idCliente(acc.getClientId())
 							.build();
 					
 					webClientBuilder.build().post()
-					.uri("http://localhost:8090/api/movement/saveMovement")
+					.uri(urlGateway+"/api/movement/saveMovement")
 					.body(Mono.just(movement), MovementDocument.class)
 					.retrieve().bodyToMono(MovementDocument.class).subscribe();
 					
@@ -105,7 +112,34 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 				});
 			
 		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-	}
+	}else {
+		return currentAccountDao.findById(idCuenta).flatMap( c -> {
+			c.setAmountInAccount(c.getAmountInAccount() + cantidad-comissionPerMovement);
+				return currentAccountDao.save(c).flatMap(acc -> {
+					Date date = Calendar.getInstance().getTime();
+					MovementDocument movement = MovementDocument.builder()
+							.tipoMovimiento("Deposito")
+							.tipoProducto("Cuenta Corriente")
+							.fechaMovimiento(dateFormat.format(date))
+							.comission(comissionPerMovement)
+							.idCuenta(idCuenta)
+							.idCliente(acc.getClientId())
+							.build();
+					
+					webClientBuilder.build().post()
+					.uri(urlGateway+"/api/movement/saveMovement")
+					.body(Mono.just(movement), MovementDocument.class)
+					.retrieve().bodyToMono(MovementDocument.class).subscribe();
+					
+					
+					response.put("mensaje", "Se hizo el deposito exitosamente");
+					response.put("cuenta", acc);
+					return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+				});
+			
+		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+	}}
+			);};
 
 
 	@Override
@@ -113,6 +147,12 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 		Map<String, Object> response = new HashMap<>();
 		Calendar calendar = Calendar.getInstance();
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		
+		return webClientBuilder.build().get()
+			    .uri(urlGateway+"/api/movement/numberOfMovements?idCuenta="+idCuenta)
+		.retrieve().bodyToMono(Long.class).flatMap(number->{
+		//TODO: put movements per month static
+			if (number<=amountOfMovements) {
 		
 		return currentAccountDao.findById(idCuenta).flatMap( c -> {
 			
@@ -137,7 +177,7 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 								.build();
 						
 						webClientBuilder.build().post()
-						.uri("http://localhost:8090/api/movement/saveMovement")
+						.uri(urlGateway+"/api/movement/saveMovement")
 						.body(Mono.just(movement), MovementDocument.class)
 						.retrieve().bodyToMono(MovementDocument.class).subscribe();
 						
@@ -148,7 +188,43 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 				}
 		
 		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-	}
+	}else {
+		return currentAccountDao.findById(idCuenta).flatMap( c -> {
+			
+			
+			if(c.getAmountInAccount() - cantidad -comissionPerMovement< 0) {
+				response.put("mensaje", "No puede realizar este retiro ya que no cuenta con el saldo suficiente");
+				return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+			}else {
+				
+				
+				
+				c.setAmountInAccount(c.getAmountInAccount() - cantidad-comissionPerMovement);
+				return currentAccountDao.save(c).flatMap(acc -> {
+					
+					Date date = Calendar.getInstance().getTime();
+					MovementDocument movement = MovementDocument.builder()
+							.tipoMovimiento("Retiro")
+							.tipoProducto("Cuenta Corriente")
+							.comission(comissionPerMovement)
+							.fechaMovimiento(dateFormat.format(date))
+							.idCuenta(idCuenta)
+							.idCliente(acc.getClientId())
+							.build();
+					
+					webClientBuilder.build().post()
+					.uri(urlGateway+"/api/movement/saveMovement")
+					.body(Mono.just(movement), MovementDocument.class)
+					.retrieve().bodyToMono(MovementDocument.class).subscribe();
+					
+					response.put("mensaje", "Se hizo el retiro exitosamente");
+					response.put("cuenta", acc);
+					return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+				});
+			}
+	
+	}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+	} });};
 
 	
 

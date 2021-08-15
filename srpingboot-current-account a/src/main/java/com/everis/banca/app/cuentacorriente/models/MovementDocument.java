@@ -18,7 +18,7 @@ public class MovementDocument {
 	private String tipoProducto;
 	
 	private String fechaMovimiento;
-	
+	private double comission;
 	private String idCuenta;
 	
 	private String idCliente;
