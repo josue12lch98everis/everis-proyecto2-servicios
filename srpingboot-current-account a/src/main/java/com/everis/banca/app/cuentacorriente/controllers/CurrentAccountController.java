@@ -16,6 +16,7 @@ import com.everis.banca.app.cuentacorriente.dao.CurrentAccountDao;
 import com.everis.banca.app.cuentacorriente.models.documents.CurrentAccount;
 import com.everis.banca.app.cuentacorriente.services.interfaces.ICurrentAccountService;
 
+
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -112,10 +113,10 @@ public class CurrentAccountController {
 				System.out.println("Entro al metodo guardar cuenta");
 				return currentAccountService.retirar(id, amount);
 			}
-			
-			@GetMapping("/getBalance/{id}")
-			public Mono<ResponseEntity<Map<String,Object>>> getBalance(@PathVariable("id") String id) {
-				return currentAccountService.consultarSaldo(id);
+			@GetMapping ("/getAccount/{id}")
+			public Mono<CurrentAccount> getAccount (@PathVariable("id") String id){
+				
+				return currentAccountService.findById(id);
 			}
 
 			

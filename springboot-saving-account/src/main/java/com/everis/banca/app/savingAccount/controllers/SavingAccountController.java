@@ -116,6 +116,12 @@ public class SavingAccountController {
 				return savingAccountService.consultarSaldo(id);
 			}
 			
+			@GetMapping ("/getAccount/{id}")
+			public Mono<SavingAccount> getAccount (@PathVariable("id") String id){
+				
+				return savingAccountService.findById(id);
+			}
+			
 		}
 	
 

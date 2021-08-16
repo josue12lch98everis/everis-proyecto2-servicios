@@ -182,6 +182,12 @@ public class FixedTermServiceImpl implements FixedTermService {
 			
 		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
 	}
+
+	@Override
+	public Mono<FixedTermDocument> obtenerCuenta(String idAccount) {
+		// TODO Auto-generated method stub
+		return fixedTermDao.findById(idAccount);
+	}
 	
 	
 

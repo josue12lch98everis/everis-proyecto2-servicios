@@ -30,12 +30,10 @@ public class CreateAccountController {
 	}
 
 	@GetMapping("/findAccount/{id}")
-	public Mono<ResponseEntity<?>> getProduct(@PathVariable("id") String id) {
+	public Mono<CreateAccountDocument> getProduct(@PathVariable("id") String id) {
 		Map<String,Object> response = new HashMap<>();
-		return accountService.findAccountsById(id).flatMap( a -> {
-			response.put("account", a);
-			return Mono.just(new ResponseEntity<>(response,HttpStatus.OK));
-		});
+		return accountService.findAccountsById(id);
+				
 	}
 	
 
