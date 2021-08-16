@@ -47,12 +47,14 @@ public class FixedTermServiceImpl implements FixedTermService {
 	public Mono<ResponseEntity<Map<String,Object>>> depositar(String idCuenta,Double cantidad) {
 		Map<String, Object> response = new HashMap<>();
 		Calendar calendar = Calendar.getInstance();
+
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
 		return webClientBuilder.build().get()
 			    .uri(urlGateway+"/api/movement/numberOfMovements?idCuenta="+idCuenta)
 		.retrieve().bodyToMono(Long.class).flatMap(number->{
 		//TODO: put movements per month static
 			if (number<=amountOfMovements) {
+
 		
 		return fixedTermDao.findById(idCuenta).flatMap( c -> {
 			c.setSaldo(c.getSaldo() + cantidad);
@@ -127,7 +129,7 @@ public class FixedTermServiceImpl implements FixedTermService {
 	public Mono<ResponseEntity<Map<String,Object>>> retirar(String idCuenta,Double cantidad) {
 		Map<String, Object> response = new HashMap<>();
 		Calendar calendar = Calendar.getInstance();
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 		
 		return fixedTermDao.findById(idCuenta).flatMap( c -> {
 			

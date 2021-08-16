@@ -1,6 +1,7 @@
 package com.everis.springboot.clients.controller;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.validation.Valid;
 
@@ -41,7 +42,7 @@ public class ClientController {
 	}
 	
 	@GetMapping("/client/{id}")
-	public Mono<ClientDocument> getClient(@PathVariable("id") String id) {
+	public Mono<ClientDocument> getClient(@PathVariable("id") String id) throws InterruptedException {	
 		return clientService.findClient(id);
 	}
 

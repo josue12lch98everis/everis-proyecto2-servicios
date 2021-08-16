@@ -18,4 +18,8 @@ public interface CreditService {
 	
 	Mono<ResponseEntity<Map<String,Object>>> consultCredit(String idCredit);
 
+	Mono<ResponseEntity<Map<String, Object>>> getOnlyCredits(String idClient);
+
+	Mono<ResponseEntity<Map<String, Object>>> getCreditCards(String idClient);
+
 }

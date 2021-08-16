@@ -1,11 +1,13 @@
 package com.everis.springboot.createaccount.controller;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,8 +30,12 @@ public class CreateAccountController {
 	}
 
 	@GetMapping("/findAccount/{id}")
-	public Mono<CreateAccountDocument> getProduct(@PathVariable("id") String id) {
-		return accountService.findAccountsById(id);
+	public Mono<ResponseEntity<?>> getProduct(@PathVariable("id") String id) {
+		Map<String,Object> response = new HashMap<>();
+		return accountService.findAccountsById(id).flatMap( a -> {
+			response.put("account", a);
+			return Mono.just(new ResponseEntity<>(response,HttpStatus.OK));
+		});
 	}
 	
 
