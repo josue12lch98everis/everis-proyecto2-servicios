@@ -33,7 +33,7 @@ public class CurrentAccountImpl implements ICurrentAccountService {
 	@Value("${everis.cantidad.movimientos}")
 	private Integer amountOfMovements;
 	@Value("${everis.comision.movimientos}")
-	private Integer comissionPerMovement;
+	private double comissionPerMovement;
 	@Value("${everis.url.gateway}")
 	private String urlGateway;
 	

@@ -36,7 +36,7 @@ public class SavingAccountImpl implements SavingAccountService {
 	@Value("${everis.cantidad.movimientos}")
 	private Integer amountOfMovements;
 	@Value("${everis.comision.movimientos}")
-	private Integer comissionPerMovement;
+	private double comissionPerMovement;
 	@Value("${everis.url.gateway}")
 	private String urlGateway;
 	
@@ -121,7 +121,7 @@ public class SavingAccountImpl implements SavingAccountService {
 									.build();
 							
 							webClientBuilder.build().post()
-							.uri("http://localhost:8090/api/movement/saveMovement")
+							.uri(urlGateway+"/api/movement/saveMovement")
 							.body(Mono.just(movement), MovementDocument.class)
 							.retrieve().bodyToMono(MovementDocument.class).subscribe();
 						
@@ -147,18 +147,19 @@ public class SavingAccountImpl implements SavingAccountService {
 		Map<String, Object> response = new HashMap<>();
 		Calendar calendar = Calendar.getInstance();
 		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
-		
+		return webClientBuilder.build().get()
+			    .uri(urlGateway+"/api/movement/numberOfMovements?idCuenta="+idCuenta)
+		.retrieve().bodyToMono(Long.class).flatMap(number->{
+		//TODO: put movements per month static
+			if (number<=amountOfMovements) {
 		return savingAccountDao.findById(idCuenta).flatMap( c -> {
 			
 			
-				if(c.getAmountInAccount() - cantidad - comissionPerMovement< 0) {
+				if(c.getAmountInAccount() - cantidad < 0) {
 					response.put("mensaje", "No puede realizar este retiro ya que no cuenta con el saldo suficiente");
 					return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
 				}else {
-					
-					
-					
-					c.setAmountInAccount(c.getAmountInAccount() - cantidad - comissionPerMovement);
+					c.setAmountInAccount(c.getAmountInAccount() - cantidad );
 					return savingAccountDao.save(c).flatMap(acc -> {
 						
 						Date date = Calendar.getInstance().getTime();
@@ -166,7 +167,7 @@ public class SavingAccountImpl implements SavingAccountService {
 								.tipoMovimiento("Retiro")
 								.tipoProducto("Cuenta Corriente")
 								.fechaMovimiento(dateFormat.format(date))
-								.comission(comissionPerMovement)
+								
 								.idCuenta(idCuenta)
 								.idCliente(acc.getClientId())
 								.build();
@@ -184,8 +185,46 @@ public class SavingAccountImpl implements SavingAccountService {
 		
 		}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
 	}
-
-	
+			else {
+				return savingAccountDao.findById(idCuenta).flatMap( c -> {
+					
+					
+					if(c.getAmountInAccount() - cantidad - comissionPerMovement< 0) {
+						response.put("mensaje", "No puede realizar este retiro ya que no cuenta con el saldo suficiente");
+						return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+					}else {
+						
+						
+						
+						c.setAmountInAccount(c.getAmountInAccount() - cantidad - comissionPerMovement);
+						return savingAccountDao.save(c).flatMap(acc -> {
+							
+							Date date = Calendar.getInstance().getTime();
+							MovementDocument movement = MovementDocument.builder()
+									.tipoMovimiento("Retiro")
+									.tipoProducto("Cuenta Corriente")
+									.fechaMovimiento(dateFormat.format(date))
+									.comission(comissionPerMovement)
+									.idCuenta(idCuenta)
+									.idCliente(acc.getClientId())
+									.build();
+							
+							webClientBuilder.build().post()
+							.uri(urlGateway+"/api/movement/saveMovement")
+							.body(Mono.just(movement), MovementDocument.class)
+							.retrieve().bodyToMono(MovementDocument.class).subscribe();
+							
+							response.put("mensaje", "Se hizo el retiro exitosamente");
+							response.put("cuenta", acc);
+							return Mono.just(new ResponseEntity<Map<String,Object>>(response, HttpStatus.OK));
+						});
+					}
+			
+			}).defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+				
+				
+			}
+		});} 
 
 	@Override
 	public Mono<ResponseEntity<Map<String, Object>>> consultarSaldo(String idAccount) {
